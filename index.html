@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VMA Tracker — Course de Durée</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #12151c;
+    --surface2: #1a1f2b;
+    --border: #252b38;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --green: #00ff88;
+    --red: #ff2d55;
+    --yellow: #ffd700;
+    --text: #e8eaf0;
+    --muted: #5a6070;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem; letter-spacing: 3px;
+    color: var(--accent);
+  }
+  .step-indicator {
+    display: flex; gap: 8px; margin-left: auto;
+  }
+  .step-dot {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1rem;
+    background: var(--surface2); border: 2px solid var(--border);
+    color: var(--muted); transition: all 0.3s;
+  }
+  .step-dot.active { border-color: var(--accent); color: var(--accent); }
+  .step-dot.done { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+  /* ─── SCREENS ─── */
+  .screen { display: none; padding: 28px; max-width: 900px; margin: 0 auto; }
+  .screen.active { display: block; }
+
+  /* ─── CARD ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem; letter-spacing: 2px;
+    color: var(--accent); margin-bottom: 18px;
+  }
+  .card h3 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem; font-weight: 700;
+    color: var(--text); margin-bottom: 12px;
+  }
+
+  /* ─── FORM ─── */
+  .form-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  @media(max-width:600px){ .form-grid, .form-grid.three { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label {
+    font-size: 0.75rem; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted);
+  }
+  input, select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px;
+    color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 0.95rem; width: 100%;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus {
+    outline: none; border-color: var(--accent);
+  }
+
+  /* ─── SERIES BLOCK ─── */
+  .series-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface2); border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 8px;
+  }
+  .series-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem; color: var(--accent); min-width: 70px;
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    padding: 12px 28px; border-radius: 8px;
+    border: none; cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem; letter-spacing: 2px;
+    transition: all 0.2s; display: inline-flex;
+    align-items: center; gap: 8px;
+  }
+  .btn-primary {
+    background: var(--accent); color: var(--bg);
+  }
+  .btn-primary:hover { background: #00c8e0; transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-success { background: var(--green); color: var(--bg); }
+  .btn-warning { background: var(--yellow); color: var(--bg); }
+
+  .actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+
+  /* ─── RUNNER TABS ─── */
+  .runner-tabs {
+    display: flex; gap: 0; margin-bottom: 20px;
+    border-radius: var(--radius); overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .runner-tab {
+    flex: 1; padding: 14px; text-align: center;
+    cursor: pointer; font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem; letter-spacing: 2px;
+    background: var(--surface2); color: var(--muted);
+    border: none; transition: all 0.2s;
+  }
+  .runner-tab.active {
+    background: var(--accent); color: var(--bg);
+  }
+
+  /* ─── CHRONO ─── */
+  .chrono-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 5rem; letter-spacing: 6px;
+    color: var(--accent); text-align: center;
+    line-height: 1;
+  }
+  .chrono-target {
+    text-align: center; color: var(--muted);
+    font-size: 0.85rem; margin-top: 4px;
+    font-family: 'DM Mono', monospace;
+  }
+  .chrono-bar-wrap {
+    height: 6px; background: var(--surface2);
+    border-radius: 3px; margin: 12px 0; overflow: hidden;
+  }
+  .chrono-bar {
+    height: 100%; background: var(--accent);
+    transition: width 0.5s linear, background 0.3s;
+    border-radius: 3px;
+  }
+
+  /* ─── BIG CLICK BUTTON ─── */
+  .btn-plot-wrap {
+    display: flex; justify-content: center; margin: 18px 0;
+  }
+  .btn-plot {
+    width: 160px; height: 160px; border-radius: 50%;
+    border: 4px solid var(--accent);
+    background: var(--surface2);
+    color: var(--accent);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem; letter-spacing: 2px;
+    cursor: pointer; text-align: center;
+    transition: all 0.15s; user-select: none;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px; box-shadow: 0 0 30px rgba(0,229,255,0.1);
+  }
+  .btn-plot:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 50px rgba(0,229,255,0.4);
+    background: rgba(0,229,255,0.1);
+  }
+  .btn-plot svg { width: 36px; height: 36px; }
+
+  /* ─── MARCHE BUTTON ─── */
+  .btn-marche {
+    padding: 10px 20px; border-radius: 8px;
+    border: 2px solid var(--red);
+    background: transparent; color: var(--red);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem; letter-spacing: 2px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-marche.active, .btn-marche:active {
+    background: var(--red); color: #fff;
+  }
+
+  /* ─── INFO PANEL ─── */
+  .info-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-bottom: 16px;
+  }
+  .info-box {
+    background: var(--surface2); border-radius: 8px;
+    padding: 12px; text-align: center;
+    border: 1px solid var(--border);
+  }
+  .info-box .val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem; letter-spacing: 2px;
+  }
+  .info-box .lbl {
+    font-size: 0.65rem; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); margin-top: 2px;
+  }
+  .val.green { color: var(--green); }
+  .val.red { color: var(--red); }
+  .val.yellow { color: var(--yellow); }
+  .val.accent { color: var(--accent); }
+
+  /* ─── FEEDBACK BADGE ─── */
+  .feedback-badge {
+    text-align: center; font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem; letter-spacing: 3px; padding: 12px;
+    border-radius: 8px; margin: 10px 0;
+    transition: all 0.3s;
+  }
+  .feedback-badge.ok { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid var(--green); }
+  .feedback-badge.fast { background: rgba(255,45,85,0.15); color: var(--red); border: 1px solid var(--red); }
+  .feedback-badge.slow { background: rgba(255,215,0,0.15); color: var(--yellow); border: 1px solid var(--yellow); }
+  .feedback-badge.hidden { opacity: 0; }
+
+  /* ─── TABLEAU PASSAGE ─── */
+  .table-wrap { overflow-x: auto; margin-top: 16px; }
+  table.passage {
+    border-collapse: collapse; width: 100%;
+    font-family: 'DM Mono', monospace; font-size: 0.8rem;
+  }
+  table.passage th {
+    background: var(--surface2); color: var(--muted);
+    padding: 6px 10px; text-align: center;
+    border: 1px solid var(--border);
+    font-size: 0.7rem; letter-spacing: 1px;
+  }
+  table.passage td {
+    padding: 6px 10px; text-align: center;
+    border: 1px solid var(--border);
+    min-width: 50px;
+  }
+  table.passage td.crossed { color: var(--accent); font-weight: 700; }
+  table.passage td.marche { background: rgba(255,45,85,0.3); color: var(--red); }
+  table.passage tr:last-child td { background: rgba(0,229,255,0.05); }
+
+  /* ─── RÉSULTATS FINAUX ─── */
+  .result-block {
+    background: var(--surface2); border-radius: 8px;
+    padding: 16px; margin-bottom: 12px;
+    border-left: 4px solid var(--accent);
+  }
+  .result-block h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem; letter-spacing: 2px; margin-bottom: 10px;
+    color: var(--accent);
+  }
+
+  /* ─── SEPARATOR ─── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* ─── CURRENT RUNNER HEADER ─── */
+  .current-runner-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--accent);
+    border-radius: 20px; padding: 6px 16px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem; letter-spacing: 2px; color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .dot-live {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ─── SERIES STATUS LIST ─── */
+  .series-status-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .series-pill {
+    padding: 4px 14px; border-radius: 20px;
+    font-family: 'DM Mono', monospace; font-size: 0.8rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .series-pill.done { border-color: var(--green); color: var(--green); background: rgba(0,255,136,0.1); }
+  .series-pill.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.1); }
+
+  /* ─── TOGGLE ─── */
+  .toggle-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .toggle {
+    width: 44px; height: 24px; border-radius: 12px;
+    background: var(--border); position: relative;
+    cursor: pointer; transition: background 0.2s; border: none;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: ''; position: absolute;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #fff; top: 3px; left: 3px;
+    transition: left 0.2s;
+  }
+  .toggle.on::after { left: 23px; }
+
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; }
+  .tag-green { background: rgba(0,255,136,0.15); color: var(--green); }
+  .tag-red { background: rgba(255,45,85,0.15); color: var(--red); }
+
+  /* responsive */
+  @media(max-width:500px) {
+    .chrono-display { font-size: 3.5rem; }
+    .btn-plot { width: 130px; height: 130px; }
+    .info-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div style="font-size:0.65rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;">EPS — Course de Durée</div>
+    <h1>VMA Tracker</h1>
+  </div>
+  <div class="step-indicator">
+    <div class="step-dot active" id="dot1">1</div>
+    <div class="step-dot" id="dot2">2</div>
+    <div class="step-dot" id="dot3">3</div>
+    <div class="step-dot" id="dot4">4</div>
+  </div>
+</header>
+
+<!-- ════════════════ SCREEN 1 : CONFIG SÉANCE ════════════════ -->
+<div class="screen active" id="screen1">
+  <div class="card">
+    <h2>⚙ Configuration de la Séance</h2>
+    <div class="form-grid three">
+      <div class="field">
+        <label>Distance piste (m)</label>
+        <input type="number" id="distPiste" value="400" min="50" step="10">
+      </div>
+      <div class="field">
+        <label>Distance entre plots (m)</label>
+        <input type="number" id="distPlots" value="25" min="5" step="5">
+      </div>
+      <div class="field">
+        <label>Séance du jour</label>
+        <input type="text" id="nomSeance" placeholder="ex: Séance 3 — Aérobie">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🏃 Séries</h2>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">
+      Chaque série doit être un multiple de 1min30. Chaque tranche = 1 colonne de plots.
+    </p>
+    <div class="field" style="margin-bottom:16px;max-width:200px;">
+      <label>Nombre de séries</label>
+      <input type="number" id="nbSeries" value="3" min="1" max="10">
+    </div>
+    <div id="seriesInputs"></div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="genSeries()">↺ Actualiser les séries</button>
+      <button class="btn btn-primary" onclick="goStep2()">Suivant →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ SCREEN 2 : PROFILS COUREURS ════════════════ -->
+<div class="screen" id="screen2">
+  <div class="runner-tabs">
+    <button class="runner-tab active" onclick="showRunnerSetup(0)">👤 Coureur 1</button>
+    <button class="runner-tab" onclick="showRunnerSetup(1)">👤 Coureur 2</button>
+  </div>
+
+  <div id="runner0Setup" class="runner-setup">
+    <div class="card">
+      <h2>Coureur 1 — Profil</h2>
+      <div class="form-grid">
+        <div class="field">
+          <label>Prénom</label>
+          <input type="text" id="r0name" placeholder="Prénom">
+        </div>
+        <div class="field">
+          <label>VMA (km/h)</label>
+          <input type="number" id="r0vma" value="14" step="0.5" min="6" max="25">
+        </div>
+      </div>
+    </div>
+    <div class="card" id="r0seriesProj">
+      <h2>Projets de vitesse — Coureur 1</h2>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:14px;">Indiquez la vitesse cible en km/h pour chaque série.</p>
+      <div id="r0proj"></div>
+    </div>
+  </div>
+
+  <div id="runner1Setup" class="runner-setup" style="display:none;">
+    <div class="card">
+      <h2>Coureur 2 — Profil</h2>
+      <div class="form-grid">
+        <div class="field">
+          <label>Prénom</label>
+          <input type="text" id="r1name" placeholder="Prénom">
+        </div>
+        <div class="field">
+          <label>VMA (km/h)</label>
+          <input type="number" id="r1vma" value="12" step="0.5" min="6" max="25">
+        </div>
+      </div>
+    </div>
+    <div class="card" id="r1seriesProj">
+      <h2>Projets de vitesse — Coureur 2</h2>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:14px;">Indiquez la vitesse cible en km/h pour chaque série.</p>
+      <div id="r1proj"></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-secondary" onclick="goStep(1)">← Retour</button>
+    <button class="btn btn-primary" onclick="goStep3()">Suivant →</button>
+  </div>
+</div>
+
+<!-- ════════════════ SCREEN 3 : COURSE ════════════════ -->
+<div class="screen" id="screen3">
+  <!-- Header coureur actif -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+    <div>
+      <div class="current-runner-badge">
+        <div class="dot-live"></div>
+        <span id="activeName">—</span>
+      </div>
+      <div style="color:var(--muted);font-size:0.8rem;" id="serieLabel">Série —</div>
+    </div>
+    <div>
+      <button class="btn btn-secondary" onclick="switchRunner()" id="btnSwitch">↔ Changer de coureur</button>
+    </div>
+  </div>
+
+  <!-- Séries status -->
+  <div id="seriesPills" class="series-status-list"></div>
+
+  <div class="card">
+    <!-- Chrono -->
+    <div class="chrono-display" id="chronoDisplay">00:00</div>
+    <div class="chrono-target" id="chronoTarget">Objectif : 00:00</div>
+    <div class="chrono-bar-wrap">
+      <div class="chrono-bar" id="chronoBar" style="width:0%"></div>
+    </div>
+
+    <!-- Info boxes -->
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="val accent" id="dispVitMoy">—</div>
+        <div class="lbl">Vit. moy. col.</div>
+      </div>
+      <div class="info-box">
+        <div class="val accent" id="dispVitCible">—</div>
+        <div class="lbl">Cible (km/h)</div>
+      </div>
+      <div class="info-box">
+        <div class="val accent" id="dispEcart">—</div>
+        <div class="lbl">Écart (km/h)</div>
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="feedback-badge hidden" id="feedbackBadge">DANS LA ZONE</div>
+
+    <!-- Boutons -->
+    <div class="btn-plot-wrap">
+      <button class="btn-plot" id="btnPlot" onclick="clickPlot()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v4l3 3"/>
+        </svg>
+        PLOT
+      </button>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;">
+      <button class="btn-marche" id="btnMarche" onclick="toggleMarche()">🚶 MARCHE</button>
+      <button class="btn btn-primary" id="btnStartStop" onclick="startStopSerie()">▶ DÉMARRER</button>
+      <button class="btn btn-warning" onclick="nextSerie()" id="btnNextSerie" style="display:none;">→ Série suivante</button>
+    </div>
+  </div>
+
+  <!-- Tableau passages -->
+  <div class="card">
+    <h3>Tableau des passages</h3>
+    <div class="table-wrap" id="tableWrap"></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-success" onclick="goStep4()">✓ Terminer la séance</button>
+  </div>
+</div>
+
+<!-- ════════════════ SCREEN 4 : RÉSULTATS ════════════════ -->
+<div class="screen" id="screen4">
+  <div class="card">
+    <h2>📊 Bilan de Séance</h2>
+    <div id="resultsContent"></div>
+  </div>
+  <div class="actions">
+    <button class="btn btn-primary" onclick="exportCSV()">⬇ Exporter CSV</button>
+    <button class="btn btn-secondary" onclick="exportXLS()">⬇ Exporter Excel</button>
+    <button class="btn btn-secondary" onclick="location.reload()">↺ Nouvelle séance</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
+const S = {
+  distPiste: 400,
+  distPlots: 25,
+  nomSeance: '',
+  series: [],        // [{dureeMin, dureeMs, nbCols}]
+  runners: [
+    { name:'Coureur 1', vma:14, projets:[] },
+    { name:'Coureur 2', vma:12, projets:[] }
+  ],
+  // course state
+  activeRunner: 0,   // 0 ou 1
+  currentSerieIdx: 0,
+  // données par coureur/serie: data[runnerIdx][serieIdx] = { passages:[], marcheSet:Set, columnStarts:[] }
+  data: [ [], [] ],
+  // chrono
+  chronoInterval: null,
+  chronoStart: null,
+  chronoElapsed: 0,
+  chronoRunning: false,
+  chronoFinished: false,
+  // click state
+  plotCount: 0,      // clicks in current column
+  colCount: 0,       // which column
+  marcheNext: false,
+  columnStartTime: 0, // ms when current column started
+};
+
+function durToMs(m,s){ return (m*60+s)*1000; }
+function msToDurStr(ms){
+  const t = Math.floor(ms/1000);
+  const m = Math.floor(t/60), s = t%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+
+// ══════════════════════════════════════════════════════════
+//  SCREEN NAV
+// ══════════════════════════════════════════════════════════
+function goStep(n){
+  document.querySelectorAll('.screen').forEach(e=>e.classList.remove('active'));
+  document.getElementById('screen'+(n+1)).classList.add('active');
+  document.querySelectorAll('.step-dot').forEach((d,i)=>{
+    d.classList.toggle('active', i===n);
+    d.classList.toggle('done', i<n);
+  });
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════════════════
+//  STEP 1 : séries
+// ══════════════════════════════════════════════════════════
+function genSeries(){
+  const nb = parseInt(document.getElementById('nbSeries').value)||3;
+  const wrap = document.getElementById('seriesInputs');
+  wrap.innerHTML='';
+  for(let i=0;i<nb;i++){
+    const prev = S.series[i];
+    const defMin = prev ? Math.floor(prev.dureeMs/60000) : (i+1)*3;
+    const defSec = prev ? Math.floor((prev.dureeMs%60000)/1000) : 0;
+    wrap.innerHTML+=`
+    <div class="series-row">
+      <span class="series-label">SÉRIE ${i+1}</span>
+      <div class="field" style="flex:1">
+        <label>Minutes</label>
+        <input type="number" id="sm${i}" value="${defMin}" min="1" step="1">
+      </div>
+      <div class="field" style="flex:1">
+        <label>Secondes (multiple de 30)</label>
+        <select id="ss${i}">
+          <option value="0" ${defSec===0?'selected':''}>00</option>
+          <option value="30" ${defSec===30?'selected':''}>30</option>
+        </select>
+      </div>
+      <div style="font-size:0.7rem;color:var(--muted);min-width:80px;" id="sinfo${i}"></div>
+    </div>`;
+  }
+  // live preview
+  for(let i=0;i<nb;i++){
+    ['sm','ss'].forEach(p=>{
+      document.getElementById(p+i).addEventListener('input',()=>updateSerieInfo(i,nb));
+    });
+    updateSerieInfo(i,nb);
+  }
+}
+
+function updateSerieInfo(i,nb){
+  const m = parseInt(document.getElementById('sm'+i).value)||0;
+  const s = parseInt(document.getElementById('ss'+i).value)||0;
+  const totalMs = (m*60+s)*1000;
+  const colDur = 90000; // 1min30
+  const cols = totalMs/colDur;
+  const el = document.getElementById('sinfo'+i);
+  if(el) el.textContent = Number.isInteger(cols) ? `${cols} col.` : `⚠ Non multiple de 1:30`;
+}
+
+function goStep2(){
+  const nb = parseInt(document.getElementById('nbSeries').value)||3;
+  const series=[];
+  for(let i=0;i<nb;i++){
+    const m=parseInt(document.getElementById('sm'+i).value)||0;
+    const s=parseInt(document.getElementById('ss'+i).value)||0;
+    const ms=(m*60+s)*1000;
+    if(ms<=0){alert(`Série ${i+1} : durée invalide`);return;}
+    if(ms%90000!==0){alert(`Série ${i+1} : durée doit être multiple de 1min30`);return;}
+    series.push({dureeMs:ms, nbCols:ms/90000});
+  }
+  S.series=series;
+  S.distPiste=parseInt(document.getElementById('distPiste').value)||400;
+  S.distPlots=parseInt(document.getElementById('distPlots').value)||25;
+  S.nomSeance=document.getElementById('nomSeance').value||'Séance';
+  // Init data
+  S.data=[[],[]];
+  for(let r=0;r<2;r++){
+    for(let i=0;i<nb;i++) S.data[r].push({passages:[],marcheSet:new Set(),colStarts:[]});
+  }
+  // build projets inputs
+  buildProjInputs();
+  goStep(1);
+}
+
+function buildProjInputs(){
+  for(let r=0;r<2;r++){
+    const wrap = document.getElementById('r'+r+'proj');
+    wrap.innerHTML='';
+    S.series.forEach((s,i)=>{
+      const prev = S.runners[r].projets[i];
+      const def = prev||'';
+      wrap.innerHTML+=`
+      <div class="series-row">
+        <span class="series-label">S${i+1}</span>
+        <div style="color:var(--muted);font-size:0.8rem;min-width:80px;">${msToDurStr(s.dureeMs)}</div>
+        <div class="field" style="flex:1">
+          <label>Vitesse cible (km/h)</label>
+          <input type="number" id="r${r}p${i}" value="${def}" step="0.1" min="4" max="30" placeholder="ex: 11.5">
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);min-width:60px;" id="r${r}ppct${i}"></div>
+      </div>`;
+    });
+    // % VMA preview
+    S.series.forEach((_,i)=>{
+      const el = document.getElementById('r'+r+'p'+i);
+      el.addEventListener('input',()=>updateVmaPct(r,i));
+      updateVmaPct(r,i);
+    });
+  }
+}
+
+function updateVmaPct(r,i){
+  const vma=parseFloat(document.getElementById('r'+r+'vma').value)||0;
+  const v=parseFloat(document.getElementById('r'+r+'p'+i).value)||0;
+  const el=document.getElementById('r'+r+'ppct'+i);
+  if(el&&vma>0&&v>0) el.textContent=Math.round(v/vma*100)+'% VMA';
+  else if(el) el.textContent='';
+}
+
+function showRunnerSetup(r){
+  document.querySelectorAll('.runner-setup').forEach(e=>e.style.display='none');
+  document.getElementById('runner'+r+'Setup').style.display='block';
+  document.querySelectorAll('.runner-tab').forEach((t,i)=>t.classList.toggle('active',i===r));
+}
+
+function goStep3(){
+  // save runner profiles
+  for(let r=0;r<2;r++){
+    S.runners[r].name=document.getElementById('r'+r+'name').value||'Coureur '+(r+1);
+    S.runners[r].vma=parseFloat(document.getElementById('r'+r+'vma').value)||14;
+    S.runners[r].projets=[];
+    for(let i=0;i<S.series.length;i++){
+      const v=parseFloat(document.getElementById('r'+r+'p'+i).value)||0;
+      if(v<=0){alert(`${S.runners[r].name} : vitesse cible série ${i+1} manquante`);return;}
+      S.runners[r].projets.push(v);
+    }
+  }
+  // ask who starts
+  const names=[S.runners[0].name,S.runners[1].name];
+  const choice=confirm(`Qui commence ?\n\nOK → ${names[0]}\nAnnuler → ${names[1]}`);
+  S.activeRunner=choice?0:1;
+  S.currentSerieIdx=0;
+  initCourse();
+  goStep(2);
+}
+
+// ══════════════════════════════════════════════════════════
+//  COURSE INIT
+// ══════════════════════════════════════════════════════════
+function initCourse(){
+  S.chronoRunning=false;
+  S.chronoFinished=false;
+  S.plotCount=0;
+  S.colCount=0;
+  S.marcheNext=false;
+  clearInterval(S.chronoInterval);
+  S.chronoInterval=null;
+  renderCourseUI();
+}
+
+function renderCourseUI(){
+  const r=S.activeRunner;
+  const si=S.currentSerieIdx;
+  const runner=S.runners[r];
+  const serie=S.series[si];
+
+  document.getElementById('activeName').textContent=runner.name+' — S'+(si+1);
+  document.getElementById('serieLabel').textContent=
+    `Série ${si+1}/${S.series.length} · ${msToDurStr(serie.dureeMs)} · Cible: ${runner.projets[si]} km/h`;
+
+  // pills
+  const pills=document.getElementById('seriesPills');
+  pills.innerHTML='';
+  S.series.forEach((_,i)=>{
+    const d0=S.data[0][i].passages.length>0;
+    const d1=S.data[1][i].passages.length>0;
+    const pill=document.createElement('div');
+    pill.className='series-pill'+(i===si?' active':(d0||d1?' done':''));
+    pill.textContent='S'+(i+1)+(d0?' ✓₁':'')+(d1?' ✓₂':'');
+    pills.appendChild(pill);
+  });
+
+  // cible
+  document.getElementById('dispVitCible').textContent=runner.projets[si]+' km/h';
+  document.getElementById('dispVitMoy').textContent='—';
+  document.getElementById('dispEcart').textContent='—';
+  document.getElementById('feedbackBadge').className='feedback-badge hidden';
+
+  // chrono reset
+  S.chronoElapsed=0;
+  updateChronoDisplay(0,serie.dureeMs);
+  document.getElementById('chronoBar').style.width='0%';
+  document.getElementById('chronoTarget').textContent='Objectif : '+msToDurStr(serie.dureeMs);
+
+  // boutons
+  document.getElementById('btnStartStop').textContent='▶ DÉMARRER';
+  document.getElementById('btnStartStop').className='btn btn-primary';
+  document.getElementById('btnNextSerie').style.display='none';
+  document.getElementById('btnMarche').classList.remove('active');
+  document.getElementById('btnPlot').style.opacity='0.4';
+  document.getElementById('btnPlot').style.pointerEvents='none';
+  document.getElementById('btnSwitch').disabled=S.chronoRunning;
+
+  // reset col/plot counts for this serie
+  S.plotCount=0;
+  S.colCount=0;
+  S.marcheNext=false;
+
+  renderTable();
+}
+
+// ══════════════════════════════════════════════════════════
+//  CHRONO
+// ══════════════════════════════════════════════════════════
+function startStopSerie(){
+  if(S.chronoFinished){
+    finishSerie();
+    return;
+  }
+  if(!S.chronoRunning){
+    // START
+    S.chronoRunning=true;
+    S.chronoStart=Date.now()-S.chronoElapsed;
+    if(S.colCount===0 && S.plotCount===0){
+      S.data[S.activeRunner][S.currentSerieIdx].colStarts.push(0);
+      S.columnStartTime=0;
+    }
+    document.getElementById('btnStartStop').textContent='⏸ PAUSE';
+    document.getElementById('btnStartStop').className='btn btn-danger';
+    document.getElementById('btnPlot').style.opacity='1';
+    document.getElementById('btnPlot').style.pointerEvents='auto';
+    document.getElementById('btnSwitch').disabled=true;
+
+    S.chronoInterval=setInterval(()=>{
+      S.chronoElapsed=Date.now()-S.chronoStart;
+      const serie=S.series[S.currentSerieIdx];
+      updateChronoDisplay(S.chronoElapsed,serie.dureeMs);
+      const pct=Math.min(S.chronoElapsed/serie.dureeMs*100,100);
+      const bar=document.getElementById('chronoBar');
+      bar.style.width=pct+'%';
+      bar.style.background=pct>95?'var(--red)':pct>80?'var(--yellow)':'var(--accent)';
+      if(S.chronoElapsed>=serie.dureeMs){
+        clearInterval(S.chronoInterval);
+        S.chronoRunning=false;
+        S.chronoFinished=true;
+        S.chronoElapsed=serie.dureeMs;
+        updateChronoDisplay(serie.dureeMs,serie.dureeMs);
+        document.getElementById('btnStartStop').textContent='✓ TERMINER LA SÉRIE';
+        document.getElementById('btnStartStop').className='btn btn-success';
+        document.getElementById('btnPlot').style.opacity='0.4';
+        document.getElementById('btnPlot').style.pointerEvents='none';
+      }
+    },100);
+  } else {
+    // PAUSE
+    clearInterval(S.chronoInterval);
+    S.chronoRunning=false;
+    document.getElementById('btnStartStop').textContent='▶ REPRENDRE';
+    document.getElementById('btnStartStop').className='btn btn-primary';
+    document.getElementById('btnPlot').style.opacity='0.4';
+    document.getElementById('btnPlot').style.pointerEvents='none';
+  }
+}
+
+function updateChronoDisplay(ms,totalMs){
+  document.getElementById('chronoDisplay').textContent=msToDurStr(ms);
+}
+
+function finishSerie(){
+  S.chronoFinished=false;
+  document.getElementById('btnNextSerie').style.display='inline-flex';
+  document.getElementById('btnSwitch').disabled=false;
+}
+
+// ══════════════════════════════════════════════════════════
+//  PLOT CLICK
+// ══════════════════════════════════════════════════════════
+function toggleMarche(){
+  S.marcheNext=!S.marcheNext;
+  document.getElementById('btnMarche').classList.toggle('active',S.marcheNext);
+}
+
+function clickPlot(){
+  if(!S.chronoRunning) return;
+  const now=S.chronoElapsed;
+  const r=S.activeRunner, si=S.currentSerieIdx;
+  const d=S.data[r][si];
+  const serie=S.series[si];
+  const nbCols=serie.nbCols;
+
+  // How many plots fit in 1:30 at 25m per plot with given target speed?
+  // Mais : chaque colonne = 1min30. On compte les passages dans la colonne courante.
+  // Un passage = un clic = 25m
+  // temps théorique pour 25m à vitesse cible: 25/vit_ms
+  const vitCible=S.runners[r].projets[si]; // km/h
+  const vitMs=vitCible/3.6; // m/s
+  const tempsPlot=S.distPlots/vitMs*1000; // ms pour traverser 25m
+  const plotsParCol=Math.round(90000/tempsPlot); // plots par colonne de 1:30
+
+  d.passages.push({t:now, col:S.colCount, marcheNext:S.marcheNext});
+  if(S.marcheNext){ d.marcheSet.add(d.passages.length-1); }
+  S.marcheNext=false;
+  document.getElementById('btnMarche').classList.remove('active');
+
+  S.plotCount++;
+  // Check if we need to advance column (1 col = 1min30)
+  const colDurMs=90000;
+  const colElapsed=now-d.colStarts[S.colCount];
+  if(colElapsed>=colDurMs && S.colCount<nbCols-1){
+    S.colCount++;
+    S.plotCount=0;
+    d.colStarts.push(now);
+  }
+
+  // Calcul vitesse moyenne de la colonne courante
+  const colPassages=d.passages.filter(p=>p.col===S.colCount);
+  const colStart=d.colStarts[S.colCount]||0;
+  const colElapsedNow=now-colStart;
+  let vitMoy=null;
+  if(colElapsedNow>0 && colPassages.length>0){
+    const distCol=colPassages.length*S.distPlots; // mètres
+    vitMoy=distCol/(colElapsedNow/1000)*3.6; // km/h
+  }
+
+  // Affichage
+  if(vitMoy!==null){
+    const ecart=vitMoy-vitCible;
+    document.getElementById('dispVitMoy').textContent=vitMoy.toFixed(1)+' km/h';
+    document.getElementById('dispEcart').textContent=(ecart>=0?'+':'')+ecart.toFixed(1);
+    const fb=document.getElementById('feedbackBadge');
+    if(Math.abs(ecart)<=0.5){
+      fb.className='feedback-badge ok';
+      fb.textContent='✓ DANS LA ZONE';
+      document.getElementById('dispEcart').className='val green';
+    } else if(ecart>0.5){
+      fb.className='feedback-badge fast';
+      fb.textContent='⚡ TROP RAPIDE';
+      document.getElementById('dispEcart').className='val red';
+    } else {
+      fb.className='feedback-badge slow';
+      fb.textContent='🐢 TROP LENT';
+      document.getElementById('dispEcart').className='val yellow';
+    }
+  }
+
+  renderTable();
+}
+
+// ══════════════════════════════════════════════════════════
+//  TABLE
+// ══════════════════════════════════════════════════════════
+function renderTable(){
+  const r=S.activeRunner, si=S.currentSerieIdx;
+  const serie=S.series[si];
+  const d=S.data[r][si];
+  const nbCols=serie.nbCols;
+  const wrap=document.getElementById('tableWrap');
+
+  if(d.passages.length===0){
+    wrap.innerHTML='<p style="color:var(--muted);text-align:center;padding:20px;">En attente du premier passage…</p>';
+    return;
+  }
+
+  // Group passages by column
+  const colGroups=[];
+  for(let c=0;c<nbCols;c++){
+    colGroups.push(d.passages.filter(p=>p.col===c));
+  }
+  const maxRows=Math.max(...colGroups.map(g=>g.length),1);
+
+  let html='<table class="passage"><thead><tr><th>Plot</th>';
+  for(let c=0;c<nbCols;c++) html+=`<th>Col.${c+1}<br><small style="color:var(--muted)">${msToDurStr(c*90000)}–${msToDurStr((c+1)*90000)}</small></th>`;
+  html+='</tr></thead><tbody>';
+
+  for(let row=maxRows-1;row>=0;row--){
+    html+=`<tr><td style="color:var(--muted)">${row+1}</td>`;
+    for(let c=0;c<nbCols;c++){
+      const p=colGroups[c][row];
+      if(p){
+        const isMar=p.marcheNext||d.marcheSet.has(d.passages.indexOf(p));
+        html+=`<td class="${isMar?'marche':'crossed'}">${isMar?'🚶':'×'}</td>`;
+      } else {
+        html+='<td></td>';
+      }
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════
+//  SWITCH / NEXT SERIE
+// ══════════════════════════════════════════════════════════
+function nextSerie(){
+  // Move to next serie for this runner then switch
+  if(S.currentSerieIdx<S.series.length-1){
+    S.currentSerieIdx++;
+    document.getElementById('btnNextSerie').style.display='none';
+    S.chronoElapsed=0;
+    S.chronoFinished=false;
+    initCourse();
+  } else {
+    alert('Toutes les séries sont terminées pour '+S.runners[S.activeRunner].name+' !');
+  }
+}
+
+function switchRunner(){
+  if(S.chronoRunning){alert('Mettez le chrono en pause avant de changer de coureur.');return;}
+  S.activeRunner=S.activeRunner===0?1:0;
+  // find next incomplete serie for this runner
+  let nextSerie=0;
+  for(let i=0;i<S.series.length;i++){
+    if(S.data[S.activeRunner][i].passages.length===0){nextSerie=i;break;}
+    nextSerie=i;
+  }
+  S.currentSerieIdx=nextSerie;
+  S.chronoElapsed=0;
+  S.chronoFinished=false;
+  initCourse();
+}
+
+// ══════════════════════════════════════════════════════════
+//  RÉSULTATS
+// ══════════════════════════════════════════════════════════
+function goStep4(){
+  if(S.chronoRunning){ alert('Terminez la série en cours avant de finaliser.'); return; }
+  renderResults();
+  goStep(3);
+}
+
+function renderResults(){
+  const wrap=document.getElementById('resultsContent');
+  let html=`<p style="color:var(--muted);margin-bottom:20px;">${S.nomSeance} · Piste ${S.distPiste}m · Plots ${S.distPlots}m</p>`;
+  for(let r=0;r<2;r++){
+    const runner=S.runners[r];
+    html+=`<div class="result-block"><h3>${runner.name} — VMA ${runner.vma} km/h</h3>`;
+    S.series.forEach((serie,si)=>{
+      const d=S.data[r][si];
+      const passages=d.passages.length;
+      const marche=d.marcheSet.size;
+      const dist=passages*S.distPlots;
+      const vitMoy=serie.dureeMs>0?(dist/(serie.dureeMs/1000)*3.6):0;
+      const cible=runner.projets[si];
+      const ecart=vitMoy-cible;
+      const zone=Math.abs(ecart)<=0.5;
+      html+=`<div style="margin:8px 0;padding:8px;background:var(--bg);border-radius:6px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <span style="font-family:'Bebas Neue',sans-serif;color:var(--accent);">S${si+1}</span>
+        <span style="font-size:0.8rem;color:var(--muted)">${msToDurStr(serie.dureeMs)}</span>
+        <span>${passages} plots · ${dist}m</span>
+        <span>Vit moy: <b style="color:${zone?'var(--green)':ecart>0.5?'var(--red)':'var(--yellow)'}">${vitMoy.toFixed(1)} km/h</b></span>
+        <span>Cible: ${cible} km/h (${Math.round(cible/runner.vma*100)}%VMA)</span>
+        <span class="tag ${zone?'tag-green':'tag-red'}">${zone?'✓ DANS LA ZONE':ecart>0.5?'⚡ TROP RAPIDE':'🐢 TROP LENT'}</span>
+        ${marche>0?`<span class="tag tag-red">🚶 ${marche} marche(s)</span>`:''}
+      </div>`;
+    });
+    html+='</div>';
+  }
+  wrap.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════
+//  EXPORT
+// ══════════════════════════════════════════════════════════
+function buildCSVData(){
+  const rows=[['Séance',S.nomSeance,'Piste',S.distPiste+'m','Plots',S.distPlots+'m'],[]];
+  for(let r=0;r<2;r++){
+    const runner=S.runners[r];
+    rows.push([runner.name,'VMA '+runner.vma+' km/h']);
+    rows.push(['Série','Durée','Cible (km/h)','%VMA','Passages','Distance (m)','Vit moy (km/h)','Écart','Zone?','Marches']);
+    S.series.forEach((serie,si)=>{
+      const d=S.data[r][si];
+      const passages=d.passages.length;
+      const dist=passages*S.distPlots;
+      const vitMoy=serie.dureeMs>0?(dist/(serie.dureeMs/1000)*3.6):0;
+      const cible=runner.projets[si];
+      const ecart=(vitMoy-cible).toFixed(1);
+      const zone=Math.abs(vitMoy-cible)<=0.5?'OUI':'NON';
+      const marche=d.marcheSet.size;
+      rows.push([`S${si+1}`,msToDurStr(serie.dureeMs),cible,Math.round(cible/runner.vma*100)+'%',
+        passages,dist,vitMoy.toFixed(1),ecart,zone,marche]);
+    });
+    // detail passages
+    rows.push(['','Détail passages :']);
+    S.series.forEach((serie,si)=>{
+      const d=S.data[r][si];
+      rows.push([`S${si+1}`,...d.passages.map((p,i)=>`t=${msToDurStr(p.t)} col=${p.col+1}${d.marcheSet.has(i)?'[M]':''}`)]);
+    });
+    rows.push([]);
+  }
+  return rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+}
+
+function exportCSV(){
+  const csv=buildCSVData();
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`VMA_${S.nomSeance.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function exportXLS(){
+  // Simple SYLK-like HTML table export readable by Excel
+  const csv=buildCSVData();
+  // Use CSV with BOM, Excel opens it natively; for .xls we build a simple HTML table
+  let html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">';
+  html+='<head><meta charset="UTF-8"><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>';
+  html+=`<x:Name>${S.nomSeance||'Séance'}</x:Name>`;
+  html+='<x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml></head><body>';
+  html+='<table border="1">';
+  // parse csv
+  csv.split('\n').forEach(line=>{
+    html+='<tr>';
+    line.split(',').forEach(cell=>{
+      const v=cell.replace(/^"|"$/g,'').replace(/""/g,'"');
+      html+=`<td>${v}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</table></body></html>';
+  const blob=new Blob([html],{type:'application/vnd.ms-excel;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`VMA_${S.nomSeance.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.xls`;
+  a.click();
+}
+
+// ══════════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════════
+genSeries();
+</script>
+</body>
+</html>
